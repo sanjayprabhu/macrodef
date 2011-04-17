@@ -28,7 +28,7 @@
 	</target>
 	
 	<target name="test" depends="compile">
-		<nant buildfile="tests.build"/>
+		<nant buildfile="test/tests.build"/>
 	</target>
 	
 	<target name="doc" depends="compile">
