@@ -1,0 +1,113 @@
+<?xml version="1.0" ?>
+<project name="exoftware.nant" default="test" xmlns="http://nant.sf.net/schemas/nant.xsd">
+	<loadtasks assembly="build/Macrodef.dll" verbose="true" />
+	
+	<macrodef name="assert-equals">
+		<attributes>
+			<attribute name="name"/>
+			<attribute name="expected"/>
+			<attribute name="actual"/>
+		</attributes>
+		<sequential>
+			<fail if="${ expected != actual}" message="${name}: expected '${expected}' but was '${actual}'"/>
+		</sequential>
+	</macrodef>
+	
+	<target name="test-macro-defined">
+		<macrodef name="empty-macro">
+			<sequential/>
+		</macrodef>
+		<empty-macro a="1" b="2"/>
+	</target>
+	
+	<target name="test-attributes">
+		<macrodef name="simple-macro">
+			<attributes>
+				<attribute name="a" property="propa"/>
+				<attribute name="b" property="propb" default="b"/>
+			</attributes>
+			<sequential>
+				<property name="actual_a" value="${propa}"/>
+				<property name="actual_b" value="${propb}"/>
+			</sequential>
+		</macrodef>
+
+		<simple-macro a="1" b="2"/>
+		<fail if="${ actual_a != '1'}" message="a: expected 1 but was ${actual_a}"/>
+		<fail if="${ actual_b != '2'}" message="b: expected 2 but was ${actual_b}"/>
+
+		<simple-macro a="1"/>
+		<fail if="${ actual_a != '1'}" message="a: expected 1 but was ${actual_a}"/>
+		<fail if="${ actual_b != 'b'}" message="b: expected b but was ${actual_b}"/>
+	</target>
+	
+	<target name="test-properties-backedup">
+		<macrodef name="store-old-values">
+			<attributes>
+				<attribute name="a"/>
+				<attribute name="b"/>
+			</attributes>
+			<sequential>
+				<property name="given_a" value="${a}"/>
+				<property name="given_b" value="${b}"/>
+			</sequential>
+		</macrodef>
+
+		<property name="a" value="1"/>
+		
+		<store-old-values a="2" b="b" />
+		<fail if="${ given_a != '2'}" message="given_a: expected 2 but was ${given_a}"/>
+		<fail if="${ a != '1'}" message="a: expected 1 but was ${a}"/>
+		
+		<fail if="${ given_b != 'b'}" message="given_b: expected b but was ${given_b}"/>
+		<fail if="${ property::exists('b')}" message="'b' should not exist outside macro"/>
+	</target>
+	
+	<target name="test-property-subst">
+		<macrodef name="property-subst">
+			<attributes>
+				<attribute name="a"/>
+			</attributes>
+			<sequential>
+				<property name="actual_a" value="${a}"/>
+				<property name="function_result" value="${bool::to-string(true)}"/>
+			</sequential>
+		</macrodef>
+
+		<property name="myprop" value="a"/>
+
+		<property-subst a="${myprop}"/>
+		<assert-equals name="a" expected="a" actual="${actual_a}"/>
+		<assert-equals name="function_result" expected="True" actual="${function_result}"/>
+	</target>
+	
+	<target name="test-elements">
+		<macrodef name="macro-with-elements">
+			<elements>
+				<element name="element1"/>
+			</elements>
+			<sequential>
+				<echo message="before element1"/>
+				<element1/>
+				<echo message="after element1"/>
+			</sequential>
+		</macrodef>
+
+		<macro-with-elements>
+			<element1>
+				<property name="element_executed" value="true"/>
+			</element1>
+		</macro-with-elements>
+		<fail if="${ element_executed != 'true'}" message="element_executed: expected true but was ${element_executed}"/>
+	</target>
+	
+	<target name="test" depends="
+			test-macro-defined,
+			test-attributes,
+			test-properties-backedup,
+			test-property-subst,
+			test-elements
+			"/>
+	
+</project>
+

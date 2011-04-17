@@ -1,0 +1,129 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>/Users/eoincurran/nant/macrodef/build/Macrodef</name>
+    </assembly>
+    <members>
+        <member name="T:Macrodef.AssertFailTask">
+            <summary>
+            Makes sure that the nested block fails. Used in tests of macrodef.
+            </summary>
+        </member>
+        <member name="P:Macrodef.AssertFailTask.Message">
+            <summary>
+            Optional error message - thrown if nested block doesn't fail.
+            </summary>
+        </member>
+        <member name="T:Macrodef.MacroAttribute">
+            <summary>
+            Describes a parameter/attribute of the macro. Can be accessed as properties within the macro definition (i.e. ${prop}).
+            </summary>
+        </member>
+        <member name="P:Macrodef.MacroAttribute.name">
+            <summary>
+            The name of the attribute.
+            </summary>
+        </member>
+        <member name="P:Macrodef.MacroAttribute.property">
+            <summary>
+            Property name to store the value in - defaults to the name of the attribute.
+            </summary>
+        </member>
+        <member name="P:Macrodef.MacroAttribute.defaultValue">
+            <summary>
+            Default value - the property will be set to this if the attribute is not present.
+            </summary>
+        </member>
+        <member name="T:Macrodef.MacroDefSequential">
+            <summary>
+            Contains the template for the macro - the tasks that should be executed when the macro is called.
+            </summary>
+        </member>
+        <member name="T:Macrodef.MacroDefTask">
+            <summary>
+            Defines a new task.
+            </summary>
+            <remarks>
+            Derived from <a href="http://ant.apache.org/manual/CoreTasks/macrodef.html">Ant's macrodef task</a>.
+            Defines a new task, called <see cref="P:Macrodef.MacroDefTask.name" />, which uses the
+            <see cref="P:Macrodef.MacroDefTask.StuffToDo" /> element as a template.
+            The new task can have xml <see cref="P:Macrodef.MacroDefTask.Attributes" /> and xml child <see cref="P:Macrodef.MacroDefTask.Elements" />.
+            </remarks>
+            <example>
+                <para>Simple Macro.</para>
+                <code><![CDATA[
+            <macrodef name="mytask">
+            		<sequential>
+            			<echo messasge="mytask invoked!"/>
+            		</sequential>
+            </macrodef>
+            <mytask/>
+            ]]></code>
+            </example>
+            <example>
+                <para>Receive Parameters.</para>
+                <code><![CDATA[
+            <macrodef name="assert-equals">
+            <attributes>
+            <attribute name="name"/>
+            <attribute name="expected"/>
+            <attribute name="actual"/>
+            </attributes>
+            	  <sequential>
+            <fail if="${ expected != actual}" message="${name}: expected '${expected}' but was '${actual}'"/>
+            </sequential>
+            </macrodef>
+            ]]></code>
+            </example>
+            <example>
+                <para>Receive Callable Elements.</para>
+                <code><![CDATA[<macrodef name="macro-with-elements">
+            		<elements>
+            			<element name="element1"/>
+            		</elements>
+            		<sequential>
+            			<echo message="before element1"/>
+            			<element1/>
+            			<echo message="after element1"/>
+            		</sequential>
+            	</macrodef>
+            	<macro-with-elements>
+            		<element1>
+            			<echo message="element1"/>
+            		</element1>
+            	</macro-with-elements>
+            ]]></code>
+            </example>
+        </member>
+        <member name="P:Macrodef.MacroDefTask.StuffToDo">
+            <summary>
+            The tasks to execute when this macro is invoked.
+            </summary>
+        </member>
+        <member name="P:Macrodef.MacroDefTask.Attributes">
+            <summary>
+            Attributes to the task - simple xml attributes on the macro invocation.
+            </summary>
+        </member>
+        <member name="P:Macrodef.MacroDefTask.Elements">
+            <summary>
+            Attributes to the task - xml child elements of the macro invocation.
+            </summary>
+        </member>
+        <member name="P:Macrodef.MacroDefTask.name">
+            <summary>
+            The name of the macro.
+            </summary>
+        </member>
+        <member name="T:Macrodef.MacroElement">
+            <summary>
+            Describe nested elements that can be supplied to the macrodef. These elements are callable by name.
+            </summary>
+        </member>
+        <member name="P:Macrodef.MacroElement.name">
+            <summary>
+            The name of the element.
+            </summary>
+        </member>
+    </members>
+</doc>

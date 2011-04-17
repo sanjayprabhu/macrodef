@@ -1,0 +1,71 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <!-- Documenting T:Macrodef.MacroDefTask-->
+  <head>
+    <meta http-equiv="Content-Language" content="en-ca" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="../style.css" />
+    <title>&lt;macrodef&gt; Task</title>
+  </head>
+  <body>
+    <table width="100%" border="0" cellspacing="0" cellpadding="2" class="NavBar">
+      <tr>
+        <td class="NavBar-Cell">
+          <a href="http://peelmeagrape.net/">
+            <b>NAnt macrodef</b>
+          </a>
+          <img alt="-&gt;" src="../images/arrow.gif" />
+          <a href="../index.html">Help</a>
+          <img alt="-&gt;" src="../images/arrow.gif" />
+          <a href="../tasks/index.html">Task Reference</a>
+          <img alt="-&gt;" src="../images/arrow.gif" /> &lt;macrodef&gt;</td>
+        <td class="NavBar-Cell" align="right">
+                        v0.1.0</td>
+      </tr>
+    </table>
+    <h1>&lt;macrodef&gt;</h1>
+    <p class="topicstatus">[This is preliminary documentation and subject to change.]</p>
+    <p> Defines a new task. </p> Derived from <a href="http://ant.apache.org/manual/CoreTasks/macrodef.html" xmlns="">Ant's macrodef task</a>. Defines a new task, called <code>name</code>, which uses the <code>sequential</code> element as a template. The new task can have xml <code>attributes</code> and xml child <code>elements</code>. <h3>Parameters</h3><div class="table"><table><tr><th>Attribute</th><th style="text-align: center;">Type</th><th>Description</th><th style="text-align: center;">Required</th></tr><tr><td valign="top" class="required">name</td><td style="text-align: center;">string</td><td> The name of the macro. </td><td style="text-align: center;">True</td></tr><tr><td valign="top">failonerror</td><td style="text-align: center;">bool</td><td></td><td style="text-align: center;">False</td></tr><tr><td valign="top">if</td><td style="text-align: center;">bool</td><td></td><td style="text-align: center;">False</td></tr><tr><td valign="top">unless</td><td style="text-align: center;">bool</td><td></td><td style="text-align: center;">False</td></tr><tr><td valign="top">verbose</td><td style="text-align: center;">bool</td><td></td><td style="text-align: center;">False</td></tr></table></div><h3>Nested Elements:</h3><!--Element--><h4><a id="sequential"></a>
+                    &lt;sequential&gt;
+                </h4><div class="nested-element"> The tasks to execute when this macro is invoked. <p> Contains the template for the macro - the tasks that should be executed when the macro is called. </p><p /></div><h4><a id="sequential"></a>
+                    &lt;/sequential&gt;
+                </h4><!--Collection--><h4><a id="attributes"></a>
+            &lt;attributes&gt;
+        </h4><div class="nested-element"> Attributes to the task - simple xml attributes on the macro invocation. <h5>&lt;attribute&gt;</h5><div class="nested-element"><p> Describes a parameter/attribute of the macro. Can be accessed as properties within the macro definition (i.e. ${prop}). </p><h3>Parameters</h3><div class="table"><table><tr><th>Attribute</th><th style="text-align: center;">Type</th><th>Description</th><th style="text-align: center;">Required</th></tr><tr><td valign="top">default</td><td style="text-align: center;">string</td><td> Default value - the property will be set to this if the attribute is not present. </td><td style="text-align: center;">False</td></tr><tr><td valign="top">name</td><td style="text-align: center;">string</td><td> The name of the attribute. </td><td style="text-align: center;">False</td></tr><tr><td valign="top">property</td><td style="text-align: center;">string</td><td> Property name to store the value in - defaults to the name of the attribute. </td><td style="text-align: center;">False</td></tr></table></div></div><h5>&lt;/attribute&gt;</h5></div><h4>&lt;/attributes&gt;</h4><!--Collection--><h4><a id="elements"></a>
+            &lt;elements&gt;
+        </h4><div class="nested-element"> Attributes to the task - xml child elements of the macro invocation. <h5>&lt;element&gt;</h5><div class="nested-element"><p> Describe nested elements that can be supplied to the macrodef. These elements are callable by name. </p><h3>Parameters</h3><div class="table"><table><tr><th>Attribute</th><th style="text-align: center;">Type</th><th>Description</th><th style="text-align: center;">Required</th></tr><tr><td valign="top">name</td><td style="text-align: center;">string</td><td> The name of the element. </td><td style="text-align: center;">False</td></tr></table></div></div><h5>&lt;/element&gt;</h5></div><h4>&lt;/elements&gt;</h4><h3>Examples</h3><ul class="examples"><li><p>Simple Macro.</p><pre class="code">
+            &lt;macrodef name="mytask"&gt;
+                    &lt;sequential&gt;
+                        &lt;echo messasge="mytask invoked!"/&gt;
+                    &lt;/sequential&gt;
+            &lt;/macrodef&gt;
+            &lt;mytask/&gt;
+            </pre></li><li><p>Receive Parameters.</p><pre class="code">
+            &lt;macrodef name="assert-equals"&gt;
+            &lt;attributes&gt;
+            &lt;attribute name="name"/&gt;
+            &lt;attribute name="expected"/&gt;
+            &lt;attribute name="actual"/&gt;
+            &lt;/attributes&gt;
+                  &lt;sequential&gt;
+            &lt;fail if="${ expected != actual}" message="${name}: expected '${expected}' but was '${actual}'"/&gt;
+            &lt;/sequential&gt;
+            &lt;/macrodef&gt;
+            </pre></li><li><p>Receive Callable Elements.</p><pre class="code">&lt;macrodef name="macro-with-elements"&gt;
+                    &lt;elements&gt;
+                        &lt;element name="element1"/&gt;
+                    &lt;/elements&gt;
+                    &lt;sequential&gt;
+                        &lt;echo message="before element1"/&gt;
+                        &lt;element1/&gt;
+                        &lt;echo message="after element1"/&gt;
+                    &lt;/sequential&gt;
+                &lt;/macrodef&gt;
+                &lt;macro-with-elements&gt;
+                    &lt;element1&gt;
+                        &lt;echo message="element1"/&gt;
+                    &lt;/element1&gt;
+                &lt;/macro-with-elements&gt;
+            </pre></li></ul><h3>Requirements</h3><div style="margin-left: 20px;"><b>Assembly:</b> Macrodef (0.1.0.21759)
+            </div></body>
+</html>

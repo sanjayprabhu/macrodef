@@ -1,0 +1,74 @@
+<?xml version="1.0" ?>
+<project name="exoftware.nant" default="test" xmlns="http://nant.sf.net/schemas/nant.xsd">
+	<property name="build.dir" value="build" />
+
+	<!-- User targets -->
+	<target name="clean" description="Delete Automated Build artifacts">
+		<delete dir="${build.dir}" if="${directory::exists(build.dir)}"/>
+	</target>
+	
+	<target name="compile" description="Compiles using the AutomatedDebug Configuration">
+		<echo message="${nant::get-base-directory()}" />
+		<mkdir dir="build"/>
+		<csc target="library" output="build/Macrodef.dll" debug="true" doc="build/Macrodef.xml">
+		    <sources>
+			<include name="src/*.cs" />
+		    </sources>
+		    <references>
+			<include name="System.dll" />
+			<include name="System.Data.dll" />
+		        <include name="${nant::get-base-directory()}/*.dll" />
+		    </references>
+		</csc>
+	</target>
+	
+	<target name="full" depends="clean, test, dist"	description="Compiles, tests, and produces distributions" />
+	
+	<target name="dist">
+	</target>
+	
+	<target name="test" depends="compile">
+		<nant buildfile="tests.build"/>
+	</target>
+	
+	<target name="doc" depends="compile">
+	<!-- use vs.net to build before running this -->
+	<property name="link.sdkdoc.version" value="SDK_v1_1" />
+        <property name="link.sdkdoc.web" value="true" />
+        <ndoc>
+            <assemblies basedir="build">
+                <include name="*.dll" />
+            </assemblies>
+	    <summaries basedir="build">
+		<include name="*.xml" />
+	    </summaries>
+            <documenters>
+                <documenter name="NAnt">
+                    <property name="OutputDirectory" value="build/doc" />
+                    <property name="SdkDocVersion" value="${link.sdkdoc.version}" />
+                    <property name="SdkLinksOnWeb" value="${link.sdkdoc.web}" />
+                    <!-- set base uri used for linking to other NAnt docs -->
+                    <property name="NAntBaseUri" value="../" />
+                    <!-- do not filter on namespace -->
+                    <property name="NamespaceFilter" value="" />
+                    <property name="ProductName" value="NAnt macrodef" />
+                    <property name="ProductVersion" value="0.1.0" />
+		    <property name="ProductUrl" value="http://peelmeagrape.net/" />                        
+                    <property name="Preliminary" value="True" />
+                    <property name="DocumentAttributes" value="True" />
+                    <property name="IncludeAssemblyVersion" value="True" />
+                    <property name="ShowMissingParams" value="True" />
+                    <property name="ShowMissingReturns" value="True" />
+                    <property name="ShowMissingValues" value="True" />
+                </documenter>
+            </documenters>
+        </ndoc>
+	<copy todir="build/">
+            <fileset>
+                <include name="doc/**" />
+            </fileset>
+        </copy>
+    </target>
+	
+</project>
+
