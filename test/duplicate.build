@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+<project name="duplicate-test" xmlns="http://nant.sf.net/schemas/nant.xsd">
+	<loadtasks assembly="../build/Macrodef.dll" verbose="true" />
+	
+	<macrodef name="duplicate-test">
+		<sequential>
+			<echo message="Do nothing macro, for duplicate test." />
+		</sequential>
+	</macrodef>
+</project>
+

@@ -5,6 +5,8 @@
 	<!-- User targets -->
 	<target name="clean" description="Delete Automated Build artifacts">
 		<delete dir="${build.dir}" if="${directory::exists(build.dir)}"/>
+		<delete dir="bin" if="${directory::exists('bin')}"/>
+		<delete dir="obj" if="${directory::exists('obj')}"/>
 	</target>
 	
 	<target name="compile" description="Compiles using the AutomatedDebug Configuration">
@@ -24,7 +26,7 @@
 	
 	<target name="full" depends="clean, test, dist"	description="Compiles, tests, and produces distributions" />
 	
-	<target name="dist">
+	<target name="dist" depends="doc">
 	</target>
 	
 	<target name="test" depends="compile">

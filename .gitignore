@@ -1,1 +1,9 @@
 build
+*.user
+*.ncb
+*.suo
+[Bb]in
+[Db]ebug*/
+obj/
+[Rr]elease*/
+_ReSharper*/

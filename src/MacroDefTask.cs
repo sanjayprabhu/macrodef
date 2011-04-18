@@ -3,6 +3,8 @@ using System.CodeDom;
 using System.Collections;
 using System.Globalization;
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using System.Xml;
 using NAnt.Core;
 using NAnt.Core.Attributes;
@@ -119,6 +121,12 @@ namespace Macrodef
 			set { _name = value; }
 		}
 
+	    protected override void InitializeXml(XmlNode elementNode, PropertyDictionary properties, FrameworkInfo framework)
+	    {
+	        base.InitializeXml(elementNode, properties, framework);
+	        macrodefNode = elementNode;
+	    }
+
 		public static void ExecuteTask(string name, XmlNode xml, Task task)
 		{
 			MacroDefTask macrodef = (MacroDefTask) macrodefs[name];
@@ -131,18 +139,49 @@ namespace Macrodef
 			invocation.Execute();
 		}
 
-		protected override void ExecuteTask()
+		//Bad... does way too many things, should be moved to respective classes.
+        protected override void ExecuteTask()
 		{
-			macrodefs.Add(_name, this);
+            if(macrodefs.Contains(_name))
+            {
+                if (GetUniqueIdentifier() != ((MacroDefTask)macrodefs[_name]).GetUniqueIdentifier())
+                    throw new BuildException("Different MacroDef with the name : " + _name + " already exists. Cannot redefine.", Location);
+                Log(Level.Info, string.Format("macrodef \"{0}\" already included.", _name));
+                return;
+            }
+		    macrodefs[_name] = this;
 
-			CodeCompileUnit compileUnit = GenerateCode();
-			SimpleCSharpCompiler simpleCSharpCompiler = new SimpleCSharpCompiler();
-
-			compiledAssembly = simpleCSharpCompiler.CompileAssembly(compileUnit);
-			LogGeneratedCode(simpleCSharpCompiler, compileUnit);
-
-			TypeFactory.ScanAssembly(compiledAssembly, this);
+		    SimpleCSharpCompiler simpleCSharpCompiler = new SimpleCSharpCompiler(GetUniqueIdentifier());
+		    
+            if(simpleCSharpCompiler.PrecompiledDllExists())
+            {
+                TypeFactory.ScanAssembly(simpleCSharpCompiler.PreCompiledDllPath, this);
+            }
+            else
+            {
+                Log(Level.Info, string.Format("\"{0}\" New or Modified. Compiling.", _name));
+                CodeCompileUnit compileUnit = GenerateCode();
+                compiledAssembly = simpleCSharpCompiler.CompileAssembly(compileUnit);
+                LogGeneratedCode(simpleCSharpCompiler, compileUnit);
+                TypeFactory.ScanAssembly(compiledAssembly, this);
+            }
 		}
+
+	    private string GetUniqueIdentifier()
+	    {
+            if (contentAsGuid == Guid.Empty)
+                contentAsGuid = GenerateHash(macrodefNode);
+            return _name + contentAsGuid; 
+	    }
+
+        //Create a 16 byte hash from the definition of the macrodef and return a guid constructed from that hash (guid so that we can use it in a filename)
+        private Guid GenerateHash(XmlNode macrodefNode)
+	    {
+	        byte[] original = Encoding.Default.GetBytes(macrodefNode.InnerXml);
+	        HashAlgorithm algorithm = MD5.Create();
+	        byte[] hashed = algorithm.ComputeHash(original);
+	        return new Guid(hashed);
+	    }
 
 		private void LogGeneratedCode(SimpleCSharpCompiler simpleCSharpCompiler, CodeCompileUnit compileUnit)
 		{
@@ -163,6 +202,8 @@ namespace Macrodef
 		                                                      };
 
 		private Assembly compiledAssembly;
+	    private XmlNode macrodefNode;
+	    private Guid contentAsGuid = Guid.Empty;
 
 		public CodeCompileUnit GenerateCode()
 		{

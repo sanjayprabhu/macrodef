@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <project name="exoftware.nant" default="test" xmlns="http://nant.sf.net/schemas/nant.xsd">
-	<loadtasks assembly="build/Macrodef.dll" verbose="true" />
+	<loadtasks assembly="../build/Macrodef.dll" verbose="true" />
 	
 	<macrodef name="assert-equals">
 		<attributes>
@@ -100,13 +100,30 @@
 		</macro-with-elements>
 		<fail if="${ element_executed != 'true'}" message="element_executed: expected true but was ${element_executed}"/>
 	</target>
+
+
+	<target name="test-duplicate-macrodef">
+		<!--Should not fail if the same macro is included twice-->
+		<nant buildfile="duplicate.build" />
+		<nant buildfile="duplicate.build" />
+	</target>
+
+	<target name="test-duplicate-macrodef-redefinition">
+		<exec program="nant" commandline="/f:duplicate-redefinition.build" resultproperty="redefinition.failed" failonerror="false"/>
+		<if test="${redefinition.failed=='0'}">
+			<fail message="Should have failed because we are trying to redefine an existing macro."/>
+		</if>
+	</target>
+
 	
 	<target name="test" depends="
 			test-macro-defined,
 			test-attributes,
 			test-properties-backedup,
 			test-property-subst,
-			test-elements
+			test-elements,
+			test-duplicate-macrodef,
+			test-duplicate-macrodef-redefinition
 			"/>
 	
 </project>

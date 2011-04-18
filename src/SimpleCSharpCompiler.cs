@@ -12,16 +12,24 @@ namespace Macrodef
 	// adapted from <script> task
 	internal class SimpleCSharpCompiler
 	{
-		public SimpleCSharpCompiler()
+	    private readonly string uniqueIdentifier;
+
+	    public SimpleCSharpCompiler(string UniqueIdentifier)
 		{
-			Provider = CreateCodeDomProvider("Microsoft.CSharp.CSharpCodeProvider", "System");
+		    uniqueIdentifier = UniqueIdentifier;
+		    Provider = CreateCodeDomProvider("Microsoft.CSharp.CSharpCodeProvider", "System");
 			//Compiler = provider.CreateCompiler();
 			//CodeGen = provider.CreateGenerator();
 		}
 
-		//public readonly ICodeCompiler Compiler;
+	    //public readonly ICodeCompiler Compiler;
 		//public readonly ICodeGenerator CodeGen;
 		public readonly CodeDomProvider Provider;
+
+	    public string PreCompiledDllPath
+	    {
+            get { return OuptutDllPath(uniqueIdentifier); }
+	    }
 
 		public string GetSourceCode(CodeCompileUnit compileUnit)
 		{
@@ -31,13 +39,13 @@ namespace Macrodef
 			return sw.ToString();
 		}
 
-		private static CompilerParameters CreateCompilerOptions()
+		private static CompilerParameters CreateCompilerOptions(string uniqueIdentifier)
 		{
 			CompilerParameters options = new CompilerParameters();
 			options.GenerateExecutable = false;
 			// <script> task uses true - and hence doesn't work properly (second script that contains task defs fails)!
 			options.GenerateInMemory = false;
-
+		    options.OutputAssembly = OuptutDllPath(uniqueIdentifier);
 			foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
 			{
 				try
@@ -56,9 +64,14 @@ namespace Macrodef
 			return options;
 		}
 
+	    private static string OuptutDllPath(string uniqueIdentifier)
+	    {
+	        return Path.Combine(Path.GetTempPath(), uniqueIdentifier + ".dll");
+	    }
+
 		public Assembly CompileAssembly(CodeCompileUnit compileUnit)
 		{
-			CompilerParameters options = CreateCompilerOptions();
+			CompilerParameters options = CreateCompilerOptions(uniqueIdentifier);
 
 			CompilerResults results = Provider.CompileAssemblyFromDom(options, compileUnit);
 
@@ -99,5 +112,10 @@ namespace Macrodef
 			}
 			return (CodeDomProvider) provider;
 		}
+
+	    public bool PrecompiledDllExists()
+	    {
+	        return File.Exists(OuptutDllPath(uniqueIdentifier));
+	    }
 	}
 }

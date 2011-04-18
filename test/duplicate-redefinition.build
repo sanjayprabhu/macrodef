@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<project name="duplicate-redefinition-test" default="duplicate-redefinition-test" xmlns="http://nant.sf.net/schemas/nant.xsd">
+  <loadtasks assembly="../build/Macrodef.dll" verbose="true" />
+
+  <target name="duplicate-redefinition-test">
+    <nant buildfile="duplicate.build" />
+    <macrodef name="duplicate-test">
+      <sequential>
+        <echo message="Do something different macro, for duplicate redefinition test." />
+      </sequential>
+    </macrodef>
+  </target>
+
+</project>
+
