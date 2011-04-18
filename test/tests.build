@@ -115,6 +115,17 @@
 		</if>
 	</target>
 
+	<include buildfile="macrodefinitions.build" />
+  
+	<target name="test-element-from-different-context">
+		<elements-context-test>
+			<test-element>
+				<property name="test-element_executed" value="true"/>
+				<echo message ="This is a node from a different context"/>
+			</test-element>
+		</elements-context-test>
+		<fail if="${ test-element_executed != 'true'}" message="test-element_executed: expected true but was ${test-element_executed}"/>
+	</target>
 	
 	<target name="test" depends="
 			test-macro-defined,
@@ -123,7 +134,8 @@
 			test-property-subst,
 			test-elements,
 			test-duplicate-macrodef,
-			test-duplicate-macrodef-redefinition
+			test-duplicate-macrodef-redefinition,
+			test-element-from-different-context
 			"/>
 	
 </project>

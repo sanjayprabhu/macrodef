@@ -1,0 +1,14 @@
+<?xml version="1.0" ?>
+<project name="duplicate-test" xmlns="http://nant.sf.net/schemas/nant.xsd">
+	<loadtasks assembly="../build/Macrodef.dll" verbose="true" />
+	
+	<macrodef name="elements-context-test">
+    <elements>
+      <element name="test-element"/>
+    </elements>
+    <sequential>
+      <test-element/>
+    </sequential>
+	</macrodef>
+</project>
+

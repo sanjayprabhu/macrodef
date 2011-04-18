@@ -103,7 +103,9 @@ namespace Macrodef
 			Log(Level.Verbose, "Replacing element " + elementPlaceHolder.OuterXml + " in " + parentElement.OuterXml);
 			foreach (XmlNode definitionStep in invocationElementDefinition.ChildNodes)
 			{
-				parentElement.InsertBefore(definitionStep.CloneNode(true), elementPlaceHolder);
+                //needs to be imported because the context where it came from could be different (different xml file)
+                XmlNode actualNodeToBeInserted = parentElement.OwnerDocument.ImportNode(definitionStep, true);
+			    parentElement.InsertBefore(actualNodeToBeInserted, elementPlaceHolder);
 			}
 			parentElement.RemoveChild(elementPlaceHolder);
 		}
