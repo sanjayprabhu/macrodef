@@ -169,18 +169,21 @@ namespace Macrodef
 
 	    private string GetUniqueIdentifier()
 	    {
-            if (contentAsGuid == Guid.Empty)
-                contentAsGuid = GenerateHash(macrodefNode);
-            return _name + contentAsGuid; 
+            if (string.IsNullOrEmpty(contentHash))
+                contentHash = GenerateHash(macrodefNode);
+            return string.Format("{0}_{1}_mdef", _name, contentHash);
 	    }
 
-        //Create a 16 byte hash from the definition of the macrodef and return a guid constructed from that hash (guid so that we can use it in a filename)
-        private Guid GenerateHash(XmlNode macrodefNode)
+        //Create a hash from the definition of the macrodef and return it
+        private string GenerateHash(XmlNode macrodefNode)
 	    {
-	        byte[] original = Encoding.Default.GetBytes(macrodefNode.InnerXml);
-	        HashAlgorithm algorithm = MD5.Create();
+	        byte[] original = Encoding.UTF8.GetBytes(macrodefNode.InnerXml);
+	        HashAlgorithm algorithm = SHA256.Create();
 	        byte[] hashed = algorithm.ComputeHash(original);
-	        return new Guid(hashed);
+            var hashstring = new StringBuilder();
+            foreach (var @byte in hashed)
+                hashstring.AppendFormat("{0:x2}", @byte);   //convert to hex string
+            return hashstring.ToString();
 	    }
 
 		private void LogGeneratedCode(SimpleCSharpCompiler simpleCSharpCompiler, CodeCompileUnit compileUnit)
@@ -203,7 +206,7 @@ namespace Macrodef
 
 		private Assembly compiledAssembly;
 	    private XmlNode macrodefNode;
-	    private Guid contentAsGuid = Guid.Empty;
+	    private string contentHash = string.Empty;
 
 		public CodeCompileUnit GenerateCode()
 		{
