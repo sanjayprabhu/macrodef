@@ -188,7 +188,7 @@ namespace Macrodef
 
 		private void LogGeneratedCode(SimpleCSharpCompiler simpleCSharpCompiler, CodeCompileUnit compileUnit)
 		{
-			Log(Level.Verbose, simpleCSharpCompiler.GetSourceCode(compileUnit));
+			Log(Level.Debug, simpleCSharpCompiler.GetSourceCode(compileUnit));
 			Type compiledType = compiledAssembly.GetType(typeName);
 			Log(Level.Verbose, "Created type " + compiledType + " in " + compiledAssembly.Location);
 		}
