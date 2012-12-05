@@ -190,7 +190,7 @@ namespace Macrodef
 		{
 			Log(Level.Debug, simpleCSharpCompiler.GetSourceCode(compileUnit));
 			Type compiledType = compiledAssembly.GetType(typeName);
-			Log(Level.Verbose, "Created type " + compiledType + " in " + compiledAssembly.Location);
+			Log(Level.Debug, "Created type " + compiledType + " in " + compiledAssembly.Location);
 		}
 
 		private static readonly string[] _defaultNamespaces = {
