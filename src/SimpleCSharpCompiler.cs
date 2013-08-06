@@ -15,6 +15,7 @@ namespace Macrodef
     {
         private readonly string _uniqueIdentifier;
         private readonly CodeDomProvider _provider;
+        private string _runtimeVersion;
 
         public SimpleCSharpCompiler(string uniqueIdentifier)
         {
@@ -24,7 +25,7 @@ namespace Macrodef
 
         public string PreCompiledDllPath
         {
-            get { return OutputDllPath(_uniqueIdentifier); }
+            get { return OutputDllPath(); }
         }
 
         public string GetSourceCode(CodeCompileUnit compileUnit)
@@ -36,13 +37,13 @@ namespace Macrodef
             return sw.ToString();
         }
 
-        private static CompilerParameters CreateCompilerOptions(string uniqueIdentifier)
+        private CompilerParameters CreateCompilerOptions()
         {
             var options = new CompilerParameters
                 {
                     GenerateExecutable = false,
                     GenerateInMemory = false, // <script> task uses true - and hence doesn't work properly (second script that contains task defs fails)!
-                    OutputAssembly = OutputDllPath(uniqueIdentifier)
+                    OutputAssembly = PreCompiledDllPath
                 };
 
             foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
@@ -64,14 +65,16 @@ namespace Macrodef
             return options;
         }
 
-        private static string OutputDllPath(string name)
+        private string OutputDllPath()
         {
-            return Path.Combine(Path.GetTempPath(), name + ".dll");
+            var fileName = string.Format("{0}_{1}.dll", _uniqueIdentifier, _runtimeVersion);
+            
+            return Path.Combine(Path.GetTempPath(), fileName);
         }
 
         public Assembly CompileAssembly(CodeCompileUnit compileUnit)
         {
-            var options = CreateCompilerOptions(_uniqueIdentifier);
+            var options = CreateCompilerOptions();
             var results = _provider.CompileAssemblyFromDom(options, compileUnit);
 
             if (results.Errors.Count > 0)
@@ -92,7 +95,7 @@ namespace Macrodef
             return results.CompiledAssembly;
         }
 
-        private static CodeDomProvider CreateCodeDomProvider(string typeName, string assemblyName)
+        private CodeDomProvider CreateCodeDomProvider(string typeName, string assemblyName)
         {
             var providerAssembly = Assembly.Load(assemblyName);
             
@@ -101,8 +104,9 @@ namespace Macrodef
                 throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, ResourceUtils.GetString("NA2037"), assemblyName));
             }
 
-            var providerType = providerAssembly.GetType(typeName, true, true);
+            _runtimeVersion = providerAssembly.ImageRuntimeVersion.Replace('.', '_');
 
+            var providerType = providerAssembly.GetType(typeName, true, true);
             var provider = Activator.CreateInstance(providerType);
             
             if (!(provider is CodeDomProvider))
@@ -115,7 +119,7 @@ namespace Macrodef
 
         public bool PrecompiledDllExists()
         {
-            return File.Exists(OutputDllPath(_uniqueIdentifier));
+            return File.Exists(PreCompiledDllPath);
         }
     }
 }
