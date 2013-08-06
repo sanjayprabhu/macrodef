@@ -178,7 +178,7 @@ namespace Macrodef
             if (string.IsNullOrEmpty(_contentHash))
                 _contentHash = GenerateHash(_macrodefNode);
 
-            return string.Format("{0}_{1}_mdef", TaskName, _contentHash);
+            return string.Format("mdef_{0}_{1}", TaskName, _contentHash);
         }
 
         // Create a hash from the definition of the macrodef and return it
