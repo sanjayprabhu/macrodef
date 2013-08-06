@@ -9,16 +9,10 @@ namespace Macrodef
 	[ElementName("element")]
 	public class MacroElement : Element
 	{
-		/// <summary>
-		/// The name of the element.
-		/// </summary>
-		[TaskAttribute("name")]
-		public string name
-		{
-			get { return _name; }
-			set { _name = value; }
-		}
-
-		private string _name;
+	    /// <summary>
+	    /// The name of the element.
+	    /// </summary>
+	    [TaskAttribute("name")]
+	    public string ElementName { get; set; }
 	}
 }

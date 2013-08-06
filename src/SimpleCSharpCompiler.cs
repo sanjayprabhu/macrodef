@@ -4,118 +4,118 @@ using System.CodeDom.Compiler;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
+using System.Text;
 using NAnt.Core;
 using NAnt.Core.Util;
 
 namespace Macrodef
 {
-	// adapted from <script> task
-	internal class SimpleCSharpCompiler
-	{
-	    private readonly string uniqueIdentifier;
+    // adapted from <script> task
+    internal class SimpleCSharpCompiler
+    {
+        private readonly string _uniqueIdentifier;
+        private readonly CodeDomProvider _provider;
 
-	    public SimpleCSharpCompiler(string UniqueIdentifier)
-		{
-		    uniqueIdentifier = UniqueIdentifier;
-		    Provider = CreateCodeDomProvider("Microsoft.CSharp.CSharpCodeProvider", "System");
-			//Compiler = provider.CreateCompiler();
-			//CodeGen = provider.CreateGenerator();
-		}
+        public SimpleCSharpCompiler(string uniqueIdentifier)
+        {
+            _uniqueIdentifier = uniqueIdentifier;
+            _provider = CreateCodeDomProvider("Microsoft.CSharp.CSharpCodeProvider", "System");
+        }
 
-	    //public readonly ICodeCompiler Compiler;
-		//public readonly ICodeGenerator CodeGen;
-		public readonly CodeDomProvider Provider;
+        public string PreCompiledDllPath
+        {
+            get { return OutputDllPath(_uniqueIdentifier); }
+        }
 
-	    public string PreCompiledDllPath
-	    {
-            get { return OuptutDllPath(uniqueIdentifier); }
-	    }
+        public string GetSourceCode(CodeCompileUnit compileUnit)
+        {
+            var sw = new StringWriter(CultureInfo.InvariantCulture);
 
-		public string GetSourceCode(CodeCompileUnit compileUnit)
-		{
-			StringWriter sw = new StringWriter(CultureInfo.InvariantCulture);
+            _provider.GenerateCodeFromCompileUnit(compileUnit, sw, null);
 
-			Provider.GenerateCodeFromCompileUnit(compileUnit, sw, null);
-			return sw.ToString();
-		}
+            return sw.ToString();
+        }
 
-		private static CompilerParameters CreateCompilerOptions(string uniqueIdentifier)
-		{
-			CompilerParameters options = new CompilerParameters();
-			options.GenerateExecutable = false;
-			// <script> task uses true - and hence doesn't work properly (second script that contains task defs fails)!
-			options.GenerateInMemory = false;
-		    options.OutputAssembly = OuptutDllPath(uniqueIdentifier);
-			foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
-			{
-				try
-				{
-					if (!StringUtils.IsNullOrEmpty(asm.Location))
-					{
-						options.ReferencedAssemblies.Add(asm.Location);
-					}
-				}
-				catch (NotSupportedException)
-				{
-					// Ignore - this error is sometimes thrown by asm.Location 
-					// for certain dynamic assemblies
-				}
-			}
-			return options;
-		}
+        private static CompilerParameters CreateCompilerOptions(string uniqueIdentifier)
+        {
+            var options = new CompilerParameters
+                {
+                    GenerateExecutable = false,
+                    GenerateInMemory = false, // <script> task uses true - and hence doesn't work properly (second script that contains task defs fails)!
+                    OutputAssembly = OutputDllPath(uniqueIdentifier)
+                };
 
-	    private static string OuptutDllPath(string uniqueIdentifier)
-	    {
-	        return Path.Combine(Path.GetTempPath(), uniqueIdentifier + ".dll");
-	    }
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try
+                {
+                    if (!string.IsNullOrEmpty(asm.Location))
+                    {
+                        options.ReferencedAssemblies.Add(asm.Location);
+                    }
+                }
+                catch (NotSupportedException)
+                {
+                    // Ignore - this error is sometimes thrown by asm.Location 
+                    // for certain dynamic assemblies
+                }
+            }
 
-		public Assembly CompileAssembly(CodeCompileUnit compileUnit)
-		{
-			CompilerParameters options = CreateCompilerOptions(uniqueIdentifier);
+            return options;
+        }
 
-			CompilerResults results = Provider.CompileAssemblyFromDom(options, compileUnit);
+        private static string OutputDllPath(string name)
+        {
+            return Path.Combine(Path.GetTempPath(), name + ".dll");
+        }
 
-			Assembly compiled;
-			if (results.Errors.Count > 0)
-			{
-				string errors = "Errors:" + Environment.NewLine;
-				foreach (CompilerError err in results.Errors)
-				{
-					errors += err.ToString() + Environment.NewLine;
-				}
-				errors += GetSourceCode(compileUnit);
-				throw new BuildException(errors);
-			}
-			else
-			{
-				compiled = results.CompiledAssembly;
-			}
-			return compiled;
-		}
+        public Assembly CompileAssembly(CodeCompileUnit compileUnit)
+        {
+            var options = CreateCompilerOptions(_uniqueIdentifier);
+            var results = _provider.CompileAssemblyFromDom(options, compileUnit);
 
-		private static CodeDomProvider CreateCodeDomProvider(string typeName, string assemblyName)
-		{
-			Assembly providerAssembly = Assembly.Load(assemblyName);
-			if (providerAssembly == null)
-			{
-				throw new ArgumentException(string.Format(CultureInfo.InvariantCulture,
-				                                          ResourceUtils.GetString("NA2037"), assemblyName));
-			}
+            if (results.Errors.Count > 0)
+            {
+                var errors = new StringBuilder();
+                errors.AppendLine("Errors:");
+                
+                foreach (CompilerError err in results.Errors)
+                {
+                    errors.AppendLine(err.ToString());
+                }
 
-			Type providerType = providerAssembly.GetType(typeName, true, true);
+                errors.Append(GetSourceCode(compileUnit));
 
-			object provider = Activator.CreateInstance(providerType);
-			if (!(provider is CodeDomProvider))
-			{
-				throw new ArgumentException(string.Format(CultureInfo.InvariantCulture,
-				                                          ResourceUtils.GetString("NA2038"), providerType.FullName));
-			}
-			return (CodeDomProvider) provider;
-		}
+                throw new BuildException(errors.ToString());
+            }
 
-	    public bool PrecompiledDllExists()
-	    {
-	        return File.Exists(OuptutDllPath(uniqueIdentifier));
-	    }
-	}
+            return results.CompiledAssembly;
+        }
+
+        private static CodeDomProvider CreateCodeDomProvider(string typeName, string assemblyName)
+        {
+            var providerAssembly = Assembly.Load(assemblyName);
+            
+            if (providerAssembly == null)
+            {
+                throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, ResourceUtils.GetString("NA2037"), assemblyName));
+            }
+
+            var providerType = providerAssembly.GetType(typeName, true, true);
+
+            var provider = Activator.CreateInstance(providerType);
+            
+            if (!(provider is CodeDomProvider))
+            {
+                throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, ResourceUtils.GetString("NA2038"), providerType.FullName));
+            }
+
+            return (CodeDomProvider) provider;
+        }
+
+        public bool PrecompiledDllExists()
+        {
+            return File.Exists(OutputDllPath(_uniqueIdentifier));
+        }
+    }
 }

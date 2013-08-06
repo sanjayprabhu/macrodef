@@ -11,269 +11,260 @@ using NAnt.Core.Attributes;
 
 namespace Macrodef
 {
-	/// <summary>
-	/// Defines a new task.
-	/// </summary>
-	/// <remarks>
-	/// Derived from <a href="http://ant.apache.org/manual/CoreTasks/macrodef.html">Ant's macrodef task</a>.
-	/// Defines a new task, called <see cref="name"/>, which uses the
-	/// <see cref="StuffToDo"/> element as a template.
-	/// The new task can have xml <see cref="Attributes"/> and xml child <see cref="Elements"/>.
-	/// </remarks>
-	/// <example>
-	///   <para>Simple Macro.</para>
-	///   <code>
-	///   <![CDATA[
-	/// <macrodef name="mytask">
-	///		<sequential>
-	///			<echo messasge="mytask invoked!"/>
-	///		</sequential>
-	/// </macrodef>
-	/// <mytask/>
-	///   ]]>
-	///   </code>
-	/// </example>
-	/// <example>
-	///   <para>Receive Parameters.</para>
-	///   <code>
-	///   <![CDATA[
-	/// <macrodef name="assert-equals">
-	///   <attributes>
-	///     <attribute name="name"/>
-	///     <attribute name="expected"/>
-	///     <attribute name="actual"/>
-	///   </attributes>
-	///	  <sequential>
-	///     <fail if="${ expected != actual}" message="${name}: expected '${expected}' but was '${actual}'"/>
-	///   </sequential>
-	/// </macrodef>
-	///   ]]>
-	///   </code>
-	/// </example>
-	/// <example>
-	///   <para>Receive Callable Elements.</para>
-	///   <code>
-	///   <![CDATA[<macrodef name="macro-with-elements">
-	///		<elements>
-	///			<element name="element1"/>
-	///		</elements>
-	///		<sequential>
-	///			<echo message="before element1"/>
-	///			<element1/>
-	///			<echo message="after element1"/>
-	///		</sequential>
-	///	</macrodef>
-	///	<macro-with-elements>
-	///		<element1>
-	///			<echo message="element1"/>
-	///		</element1>
-	///	</macro-with-elements>
-	///   ]]>
-	///   </code>
-	/// </example>
-	[TaskName("macrodef")]
-	public class MacroDefTask : Task
-	{
-		private string _name;
-		private MacroDefSequential _sequential;
-		private ArrayList _attributes = new ArrayList();
-		private ArrayList _elements = new ArrayList();
+    /// <summary>
+    /// Defines a new task.
+    /// </summary>
+    /// <remarks>
+    /// Derived from <a href="http://ant.apache.org/manual/CoreTasks/macrodef.html">Ant's macrodef task</a>.
+    /// Defines a new task, called <see cref="TaskName"/>, which uses the
+    /// <see cref="TasksToExecute"/> element as a template.
+    /// The new task can have xml <see cref="Attributes"/> and xml child <see cref="Elements"/>.
+    /// </remarks>
+    /// <example>
+    ///   <para>Simple Macro.</para>
+    ///   <code>
+    ///   <![CDATA[
+    /// <macrodef name="mytask">
+    ///		<sequential>
+    ///			<echo messasge="mytask invoked!"/>
+    ///		</sequential>
+    /// </macrodef>
+    /// <mytask/>
+    ///   ]]>
+    ///   </code>
+    /// </example>
+    /// <example>
+    ///   <para>Receive Parameters.</para>
+    ///   <code>
+    ///   <![CDATA[
+    /// <macrodef name="assert-equals">
+    ///   <attributes>
+    ///     <attribute name="name"/>
+    ///     <attribute name="expected"/>
+    ///     <attribute name="actual"/>
+    ///   </attributes>
+    ///	  <sequential>
+    ///     <fail if="${ expected != actual}" message="${name}: expected '${expected}' but was '${actual}'"/>
+    ///   </sequential>
+    /// </macrodef>
+    ///   ]]>
+    ///   </code>
+    /// </example>
+    /// <example>
+    ///   <para>Receive Callable Elements.</para>
+    ///   <code>
+    ///   <![CDATA[<macrodef name="macro-with-elements">
+    ///		<elements>
+    ///			<element name="element1"/>
+    ///		</elements>
+    ///		<sequential>
+    ///			<echo message="before element1"/>
+    ///			<element1/>
+    ///			<echo message="after element1"/>
+    ///		</sequential>
+    ///	</macrodef>
+    ///	<macro-with-elements>
+    ///		<element1>
+    ///			<echo message="element1"/>
+    ///		</element1>
+    ///	</macro-with-elements>
+    ///   ]]>
+    ///   </code>
+    /// </example>
+    [TaskName("macrodef")]
+    public class MacroDefTask : Task
+    {
+        private static readonly IDictionary Macrodefs = new Hashtable();
 
-		private string typeName = "nant" + Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture);
+        private static readonly string[] DefaultNamespaces = {
+            "System",
+            "System.Collections",
+            "System.Collections.Specialized",
+            "System.IO",
+            "System.Text",
+            "System.Text.RegularExpressions",
+            "NAnt.Core",
+            "NAnt.Core.Attributes"
+        };
 
-		private static IDictionary macrodefs = new Hashtable();
+        private readonly string _typeName = "nant" + Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture);
 
-		/// <summary>
-		/// The tasks to execute when this macro is invoked.
-		/// </summary>
-		[BuildElement("sequential")]
-		public MacroDefSequential StuffToDo
-		{
-			get { return _sequential; }
-			set { _sequential = value; }
-		}
+        private Assembly _compiledAssembly;
+        private XmlNode _macrodefNode;
+        private string _contentHash = string.Empty;
 
-		/// <summary>
-		/// Attributes to the task - simple xml attributes on the macro invocation.
-		/// </summary>
-		[BuildElementCollection("attributes", "attribute", ElementType=typeof (MacroAttribute))]
-		public ArrayList Attributes
-		{
-			get { return _attributes; }
-		}
+        public MacroDefTask()
+        {
+            Elements = new ArrayList();
+            Attributes = new ArrayList();
+        }
 
-		/// <summary>
-		/// Attributes to the task - xml child elements of the macro invocation.
-		/// </summary>
-		[BuildElementCollection("elements", "element", ElementType=typeof (MacroElement))]
-		public ArrayList Elements
-		{
-			get { return _elements; }
-		}
+        /// <summary>
+        /// The tasks to execute when this macro is invoked.
+        /// </summary>
+        [BuildElement("sequential")]
+        public MacroDefSequential TasksToExecute { get; set; }
 
-		/// <summary>
-		/// The name of the macro.
-		/// </summary>
-		[TaskAttribute("name", Required = true)]
-		public string name
-		{
-			get { return _name; }
-			set { _name = value; }
-		}
+        /// <summary>
+        /// Attributes to the task - simple xml attributes on the macro invocation.
+        /// </summary>
+        [BuildElementCollection("attributes", "attribute", ElementType = typeof(MacroAttribute))]
+        public ArrayList Attributes { get; private set; }
 
-	    protected override void InitializeXml(XmlNode elementNode, PropertyDictionary properties, FrameworkInfo framework)
-	    {
-	        base.InitializeXml(elementNode, properties, framework);
-	        macrodefNode = elementNode;
-	    }
+        /// <summary>
+        /// Attributes to the task - xml child elements of the macro invocation.
+        /// </summary>
+        [BuildElementCollection("elements", "element", ElementType = typeof(MacroElement))]
+        public ArrayList Elements { get; private set; }
 
-		public static void ExecuteTask(string name, XmlNode xml, Task task)
-		{
-			MacroDefTask macrodef = (MacroDefTask) macrodefs[name];
-			macrodef.Invoke(xml, task);
-		}
+        /// <summary>
+        /// The name of the macro.
+        /// </summary>
+        [TaskAttribute("name", Required = true)]
+        public string TaskName { get; set; }
 
-		private void Invoke(XmlNode xml, Task task)
-		{
-			MacroDefInvocation invocation = new MacroDefInvocation(name, task, xml, _attributes, _sequential, _elements);
-			invocation.Execute();
-		}
+        protected override void InitializeXml(XmlNode elementNode, PropertyDictionary properties, FrameworkInfo framework)
+        {
+            base.InitializeXml(elementNode, properties, framework);
+            _macrodefNode = elementNode;
+        }
 
-		//Bad... does way too many things, should be moved to respective classes.
+        public static void ExecuteTask(string name, XmlNode xml, Task task)
+        {
+            var macrodef = (MacroDefTask)Macrodefs[name];
+            macrodef.Invoke(xml, task);
+        }
+
+        private void Invoke(XmlNode xml, Task task)
+        {
+            var invocation = new MacroDefInvocation(TaskName, task, xml, Attributes, TasksToExecute, Elements);
+            invocation.Execute();
+        }
+
+        // Bad... does way too many things, should be moved to respective classes.
         protected override void ExecuteTask()
-		{
-            if(macrodefs.Contains(_name))
+        {
+            if (Macrodefs.Contains(TaskName))
             {
-                if (GetUniqueIdentifier() != ((MacroDefTask)macrodefs[_name]).GetUniqueIdentifier())
-                    throw new BuildException("Different MacroDef with the name : " + _name + " already exists. Cannot redefine.", Location);
-                Log(Level.Info, string.Format("macrodef \"{0}\" already included.", _name));
+                if (GetUniqueIdentifier() != ((MacroDefTask)Macrodefs[TaskName]).GetUniqueIdentifier())
+                    throw new BuildException("Different MacroDef with the name : " + TaskName + " already exists. Cannot redefine.", Location);
+
+                Log(Level.Info, "macrodef \"{0}\" already included.", TaskName);
+
                 return;
             }
-		    macrodefs[_name] = this;
 
-		    SimpleCSharpCompiler simpleCSharpCompiler = new SimpleCSharpCompiler(GetUniqueIdentifier());
-		    
-            if(simpleCSharpCompiler.PrecompiledDllExists())
+            Macrodefs[TaskName] = this;
+
+            var simpleCSharpCompiler = new SimpleCSharpCompiler(GetUniqueIdentifier());
+
+            if (simpleCSharpCompiler.PrecompiledDllExists())
             {
                 TypeFactory.ScanAssembly(simpleCSharpCompiler.PreCompiledDllPath, this);
             }
             else
             {
-                Log(Level.Info, string.Format("\"{0}\" New or Modified. Compiling.", _name));
-                CodeCompileUnit compileUnit = GenerateCode();
-                compiledAssembly = simpleCSharpCompiler.CompileAssembly(compileUnit);
+                Log(Level.Info, "\"{0}\" New or Modified. Compiling.", TaskName);
+
+                var compileUnit = GenerateCode();
+                _compiledAssembly = simpleCSharpCompiler.CompileAssembly(compileUnit);
                 LogGeneratedCode(simpleCSharpCompiler, compileUnit);
-                TypeFactory.ScanAssembly(compiledAssembly, this);
+                TypeFactory.ScanAssembly(_compiledAssembly, this);
             }
-		}
+        }
 
-	    private string GetUniqueIdentifier()
-	    {
-            if (string.IsNullOrEmpty(contentHash))
-                contentHash = GenerateHash(macrodefNode);
-            return string.Format("{0}_{1}_mdef", _name, contentHash);
-	    }
+        private string GetUniqueIdentifier()
+        {
+            if (string.IsNullOrEmpty(_contentHash))
+                _contentHash = GenerateHash(_macrodefNode);
 
-        //Create a hash from the definition of the macrodef and return it
-        private string GenerateHash(XmlNode macrodefNode)
-	    {
-	        byte[] original = Encoding.UTF8.GetBytes(macrodefNode.InnerXml);
-	        HashAlgorithm algorithm = SHA256.Create();
-	        byte[] hashed = algorithm.ComputeHash(original);
+            return string.Format("{0}_{1}_mdef", TaskName, _contentHash);
+        }
+
+        // Create a hash from the definition of the macrodef and return it
+        private string GenerateHash(XmlNode xml)
+        {
+            var original = Encoding.UTF8.GetBytes(xml.InnerXml);
+            var algorithm = SHA256.Create();
+            var hashed = algorithm.ComputeHash(original);
             var hashstring = new StringBuilder();
+
             foreach (var @byte in hashed)
                 hashstring.AppendFormat("{0:x2}", @byte);   //convert to hex string
+
             return hashstring.ToString();
-	    }
+        }
 
-		private void LogGeneratedCode(SimpleCSharpCompiler simpleCSharpCompiler, CodeCompileUnit compileUnit)
-		{
-			Log(Level.Verbose, simpleCSharpCompiler.GetSourceCode(compileUnit));
-			Type compiledType = compiledAssembly.GetType(typeName);
-			Log(Level.Verbose, "Created type " + compiledType + " in " + compiledAssembly.Location);
-		}
+        private void LogGeneratedCode(SimpleCSharpCompiler simpleCSharpCompiler, CodeCompileUnit compileUnit)
+        {
+            Log(Level.Verbose, simpleCSharpCompiler.GetSourceCode(compileUnit));
 
-		private static readonly string[] _defaultNamespaces = {
-		                                                      	"System",
-		                                                      	"System.Collections",
-		                                                      	"System.Collections.Specialized",
-		                                                      	"System.IO",
-		                                                      	"System.Text",
-		                                                      	"System.Text.RegularExpressions",
-		                                                      	"NAnt.Core",
-		                                                      	"NAnt.Core.Attributes"
-		                                                      };
+            var compiledType = _compiledAssembly.GetType(_typeName);
 
-		private Assembly compiledAssembly;
-	    private XmlNode macrodefNode;
-	    private string contentHash = string.Empty;
+            Log(Level.Verbose, "Created type {0} in {1}", compiledType, _compiledAssembly.Location);
+        }
 
-		public CodeCompileUnit GenerateCode()
-		{
-			CodeCompileUnit compileUnit = new CodeCompileUnit();
+        public CodeCompileUnit GenerateCode()
+        {
+            var compileUnit = new CodeCompileUnit();
 
-			CodeNamespace nspace = CreateNamespaceWithDefaultImports();
-			compileUnit.Namespaces.Add(nspace);
+            var nspace = CreateNamespaceWithDefaultImports();
+            compileUnit.Namespaces.Add(nspace);
 
-			CodeTypeDeclaration taskClassDeclaration = CreateTaskClassDeclaration();
-			nspace.Types.Add(taskClassDeclaration);
+            var taskClassDeclaration = CreateTaskClassDeclaration();
+            nspace.Types.Add(taskClassDeclaration);
 
-			AddGeneratedCodeToTaskClass(taskClassDeclaration);
+            AddGeneratedCodeToTaskClass(taskClassDeclaration);
 
-			return compileUnit;
-		}
+            return compileUnit;
+        }
 
-		private void AddGeneratedCodeToTaskClass(CodeTypeDeclaration taskClassDeclaration)
-		{
-			string codeBody =
-				@"
-				private System.Xml.XmlNode _node;
+        private void AddGeneratedCodeToTaskClass(CodeTypeDeclaration taskClassDeclaration)
+        {
+            var codeBody = @"
+                private System.Xml.XmlNode _node;
 
-				protected override void ExecuteTask()
-				{
-					Macrodef.MacroDefTask.ExecuteTask(""" +
-				_name +
-				@""", _node, this);
-				}
-				
-				protected override void InitializeXml(System.Xml.XmlNode elementNode, PropertyDictionary properties, FrameworkInfo framework) 
-				{
-					_node = elementNode;
-				}
-			";
-			taskClassDeclaration.Members.Add(new CodeSnippetTypeMember(codeBody));
-		}
+                protected override void ExecuteTask()
+                {
+                    Macrodef.MacroDefTask.ExecuteTask(""" + TaskName + @""", _node, this);
+                }
+                
+                protected override void InitializeXml(System.Xml.XmlNode elementNode, PropertyDictionary properties, FrameworkInfo framework) 
+                {
+                    _node = elementNode;
+                }
+            ";
 
-		private static CodeNamespace CreateNamespaceWithDefaultImports()
-		{
-			CodeNamespace nspace = new CodeNamespace();
-			AddDefaultImports(nspace);
-			return nspace;
-		}
+            taskClassDeclaration.Members.Add(new CodeSnippetTypeMember(codeBody));
+        }
 
-		private CodeTypeDeclaration CreateTaskClassDeclaration()
-		{
-			CodeTypeDeclaration typeDecl = new CodeTypeDeclaration(typeName);
+        private static CodeNamespace CreateNamespaceWithDefaultImports()
+        {
+            var nspace = new CodeNamespace();
+            AddDefaultImports(nspace);
 
-			typeDecl.IsClass = true;
-			typeDecl.TypeAttributes = TypeAttributes.Public;
+            return nspace;
+        }
 
-			typeDecl.BaseTypes.Add(typeof (Task));
+        private CodeTypeDeclaration CreateTaskClassDeclaration()
+        {
+            var typeDeclaration = new CodeTypeDeclaration(_typeName) { IsClass = true, TypeAttributes = TypeAttributes.Public };
 
-			CodeAttributeDeclaration attrDecl = new CodeAttributeDeclaration("TaskName");
-			attrDecl.Arguments.Add(new CodeAttributeArgument(
-			                       	new CodeVariableReferenceExpression("\"" + name + "\"")));
+            typeDeclaration.BaseTypes.Add(typeof(Task));
 
-			typeDecl.CustomAttributes.Add(attrDecl);
-			return typeDecl;
-		}
+            var attributeDeclaration = new CodeAttributeDeclaration("TaskName");
+            attributeDeclaration.Arguments.Add(new CodeAttributeArgument(new CodeVariableReferenceExpression("\"" + TaskName + "\"")));
+            typeDeclaration.CustomAttributes.Add(attributeDeclaration);
 
-		private static void AddDefaultImports(CodeNamespace nspace)
-		{
-			foreach (string nameSpace in _defaultNamespaces)
-			{
-				nspace.Imports.Add(new CodeNamespaceImport(nameSpace));
-			}
-		}
-	}
+            return typeDeclaration;
+        }
+
+        private static void AddDefaultImports(CodeNamespace nspace)
+        {
+            foreach (var nameSpace in DefaultNamespaces)
+            {
+                nspace.Imports.Add(new CodeNamespaceImport(nameSpace));
+            }
+        }
+    }
 }
