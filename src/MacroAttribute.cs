@@ -9,48 +9,33 @@ namespace Macrodef
 	[ElementName("attribute")]
 	public class MacroAttribute : Element
 	{
-		/// <summary>
-		/// The name of the attribute.
-		/// </summary>
-		[TaskAttribute("name")]
-		public string name
-		{
-			get { return _name; }
-			set { _name = value; }
-		}
+	    /// <summary>
+	    /// The name of the attribute.
+	    /// </summary>
+	    [TaskAttribute("name")]
+	    public string AttributeName { get; set; }
 
-		/// <summary>
-		/// Property name to store the value in - defaults to the name of the attribute.
-		/// </summary>
-		[TaskAttribute("property")]
-		public string property
-		{
-			get { return _property; }
-			set { _property = value; }
-		}
+	    /// <summary>
+	    /// Property name to store the value in - defaults to the name of the attribute.
+	    /// </summary>
+	    [TaskAttribute("property")]
+	    public string Property { get; set; }
 
-		public string LocalPropertyName
+	    /// <summary>
+	    /// Default value - the property will be set to this if the attribute is not present.
+	    /// </summary>
+	    [TaskAttribute("default")]
+	    public string DefaultValue { get; set; }
+
+	    public string LocalPropertyName
 		{
 			get
 			{
-				if (_property == null)
-					return _name;
-				return _property;
+				if (Property == null)
+					return AttributeName;
+
+				return Property;
 			}
 		}
-
-		/// <summary>
-		/// Default value - the property will be set to this if the attribute is not present.
-		/// </summary>
-		[TaskAttribute("default")]
-		public string defaultValue
-		{
-			get { return _default; }
-			set { _default = value; }
-		}
-
-		private string _name;
-		private string _default;
-		private string _property;
 	}
 }

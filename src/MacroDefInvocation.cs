@@ -5,194 +5,200 @@ using NAnt.Core;
 
 namespace Macrodef
 {
-	internal class MacroDefInvocation
-	{
-		private readonly string name;
-		private readonly Task task;
-		private readonly XmlNode invocationXml;
-		private readonly ArrayList attributeList;
-		private readonly MacroDefSequential sequential;
-		private readonly ArrayList elements;
+    internal class MacroDefInvocation
+    {
+        private readonly string _name;
+        private readonly Task _task;
+        private readonly XmlNode _invocationXml;
+        private readonly ArrayList _attributeList;
+        private readonly MacroDefSequential _sequential;
+        private readonly ArrayList _elements;
 
-		public MacroDefInvocation(string name, Task task,
-		                          XmlNode invocationXml,
-		                          ArrayList attributeList,
-		                          MacroDefSequential sequential,
-		                          ArrayList elements)
-		{
-			this.name = name;
-			this.task = task;
-			this.invocationXml = invocationXml;
-			this.attributeList = attributeList;
-			this.sequential = sequential;
-			this.elements = elements;
-		}
+        public MacroDefInvocation(string name, Task task, XmlNode invocationXml, ArrayList attributeList, MacroDefSequential sequential, ArrayList elements)
+        {
+            _name = name;
+            _task = task;
+            _invocationXml = invocationXml;
+            _attributeList = attributeList;
+            _sequential = sequential;
+            _elements = elements;
+        }
 
-		public void Execute()
-		{
-			task.Log(Level.Verbose, "Running '" + name + "'");
-			task.Project.Indent();
-			try
-			{
-				PropertyDictionary oldPropertyValues = new PropertyDictionary(null);
+        public void Execute()
+        {
+            _task.Log(Level.Verbose, "Running '{0}'", _name);
 
-				if (attributeList != null)
-					SetUpProperties(attributeList, task, invocationXml, oldPropertyValues);
+            try
+            {
+                _task.Project.Indent();
 
-				if (sequential != null)
-				{
-					XmlNode invocationTasks = CreateInvocationTasks();
-					ExecuteInvocationTasks(invocationTasks);
-				}
+                var oldPropertyValues = new PropertyDictionary(null);
 
-				RestoreProperties(attributeList, task, oldPropertyValues);
-			}
-			finally
-			{
-				task.Project.Unindent();
-			}
-		}
+                if (_attributeList != null)
+                    SetUpProperties(_attributeList, _task, _invocationXml, oldPropertyValues);
 
-		private XmlNode CreateInvocationTasks()
-		{
-			XmlNode invocationTasks = sequential.SequentialXml;
-			if (elements.Count > 0)
-			{
-				invocationTasks = invocationTasks.CloneNode(true);
-				foreach (MacroElement element in elements)
-				{
-					ReplaceMacroElementsInInvocationXml(element.name, invocationTasks);
-				}
+                if (_sequential != null)
+                {
+                    var invocationTasks = CreateInvocationTasks();
+                    ExecuteInvocationTasks(invocationTasks);
+                }
 
-				Log(Level.Verbose, "Effective macro definition: " + invocationTasks.InnerXml);
-			}
-			return invocationTasks;
-		}
+                RestoreProperties(_attributeList, _task, oldPropertyValues);
+            }
+            finally
+            {
+                _task.Project.Unindent();
+            }
+        }
 
-		private void ReplaceMacroElementsInInvocationXml(string elementName, XmlNode invocationTasks)
-		{
-			XmlNodeList elementPlaceholders = invocationTasks.SelectNodes("nant:" + elementName, task.NamespaceManager);
-			Log(Level.Verbose,
-			    "Inserting " + elementPlaceholders.Count + " call(s) of '" + elementName + "' in " + invocationTasks.InnerXml);
+        private XmlNode CreateInvocationTasks()
+        {
+            var invocationTasks = _sequential.SequentialXml;
+            
+            if (_elements.Count > 0)
+            {
+                invocationTasks = invocationTasks.CloneNode(true);
+            
+                foreach (MacroElement element in _elements)
+                {
+                    ReplaceMacroElementsInInvocationXml(element.ElementName, invocationTasks);
+                }
 
-			if (elementPlaceholders.Count > 0)
-			{
-				XmlElement invocationElementDefinition = GetInvocationElementDefinition(elementName);
+                Log(Level.Verbose, "Effective macro definition: " + invocationTasks.InnerXml);
+            }
 
-				foreach (XmlElement elementPlaceholder in elementPlaceholders)
-				{
-					ReplaceElementPlaceHolderWithInvocationContents(invocationElementDefinition, elementPlaceholder);
-				}
-			}
-		}
+            return invocationTasks;
+        }
 
-		private XmlElement GetInvocationElementDefinition(string elementName)
-		{
-			XmlElement invocationElementDefinition =
-				invocationXml.SelectSingleNode("nant:" + elementName, task.NamespaceManager) as XmlElement;
-			if (invocationElementDefinition == null)
-				throw new BuildException("Element '" + elementName + "' must be defined");
-			return invocationElementDefinition;
-		}
+        private void ReplaceMacroElementsInInvocationXml(string elementName, XmlNode invocationTasks)
+        {
+            var elementPlaceholders = invocationTasks.SelectNodes("nant:" + elementName, _task.NamespaceManager);
+            
+            Log(Level.Verbose, "Inserting {0} call(s) of '{1}' in {2}", elementPlaceholders.Count, elementName, invocationTasks.InnerXml);
 
-		private void ReplaceElementPlaceHolderWithInvocationContents(XmlElement invocationElementDefinition,
-		                                                             XmlElement elementPlaceHolder)
-		{
-			XmlNode parentElement = elementPlaceHolder.ParentNode;
+            if (elementPlaceholders.Count > 0)
+            {
+                var invocationElementDefinition = GetInvocationElementDefinition(elementName);
 
-			Log(Level.Verbose, "Replacing element " + elementPlaceHolder.OuterXml + " in " + parentElement.OuterXml);
-			foreach (XmlNode definitionStep in invocationElementDefinition.ChildNodes)
-			{
-                //needs to be imported because the context where it came from could be different (different xml file)
-                XmlNode actualNodeToBeInserted = parentElement.OwnerDocument.ImportNode(definitionStep, true);
-			    parentElement.InsertBefore(actualNodeToBeInserted, elementPlaceHolder);
-			}
-			parentElement.RemoveChild(elementPlaceHolder);
-		}
+                foreach (XmlElement elementPlaceholder in elementPlaceholders)
+                {
+                    ReplaceElementPlaceHolderWithInvocationContents(invocationElementDefinition, elementPlaceholder);
+                }
+            }
+        }
 
-		private void Log(Level level, string s)
-		{
-			task.Log(level, s);
-		}
+        private XmlElement GetInvocationElementDefinition(string elementName)
+        {
+            var invocationElementDefinition = _invocationXml.SelectSingleNode("nant:" + elementName, _task.NamespaceManager) as XmlElement;
 
-		private void ExecuteInvocationTasks(XmlNode invocationTasks)
-		{
-			foreach (XmlNode childNode in invocationTasks)
-			{
-				if (!(childNode.NodeType == XmlNodeType.Element) ||
-				    !childNode.NamespaceURI.Equals(task.NamespaceManager.LookupNamespace("nant")))
-				{
-					continue;
-				}
+            if (invocationElementDefinition == null)
+                throw new BuildException("Element '" + elementName + "' must be defined");
+            
+            return invocationElementDefinition;
+        }
 
-				Task childTask = CreateChildTask(childNode);
-				if (childTask != null)
-				{
-					childTask.Parent = this;
-					childTask.Execute();
-				}
-			}
-		}
+        private void ReplaceElementPlaceHolderWithInvocationContents(XmlElement invocationElementDefinition, XmlElement elementPlaceHolder)
+        {
+            var parentElement = elementPlaceHolder.ParentNode;
 
-		protected virtual Task CreateChildTask(XmlNode node)
-		{
-			return task.Project.CreateTask(node);
-		}
+            Log(Level.Verbose, "Replacing element {0} in {1}", elementPlaceHolder.OuterXml, parentElement.OuterXml);
+            
+            foreach (XmlNode definitionStep in invocationElementDefinition.ChildNodes)
+            {
+                // needs to be imported because the context where it came from could be different (different xml file)
+                var actualNodeToBeInserted = parentElement.OwnerDocument.ImportNode(definitionStep, true);
 
-		private static void RestoreProperties(ArrayList attributeList, Task task, PropertyDictionary oldValues)
-		{
-			PropertyDictionary projectProperties = task.Project.Properties;
-			foreach (MacroAttribute macroAttribute in attributeList)
-			{
-				string localPropertyName = macroAttribute.LocalPropertyName;
-				string oldValue = oldValues[localPropertyName];
+                parentElement.InsertBefore(actualNodeToBeInserted, elementPlaceHolder);
+            }
+            
+            parentElement.RemoveChild(elementPlaceHolder);
+        }
 
-				if (projectProperties.Contains(localPropertyName))
-					projectProperties.Remove(localPropertyName);
-				if (oldValue != null)
-					projectProperties.Add(localPropertyName, oldValue);
-			}
-		}
+        private void Log(Level level, string s, params object[] args)
+        {
+            _task.Log(level, s, args);
+        }
 
-		private static void SetUpProperties(ArrayList attributeList, Task task, XmlNode xml,
-		                                    PropertyDictionary oldPropertyValues)
-		{
-			PropertyDictionary projectProperties = task.Project.Properties;
-			StringBuilder logMessage = new StringBuilder();
-			foreach (MacroAttribute macroAttribute in attributeList)
-			{
-				string attributeName = macroAttribute.name;
-				XmlAttribute xmlAttribute = xml.Attributes[attributeName];
-				string value = null;
-				if (xmlAttribute != null)
-				{
-					value = projectProperties.ExpandProperties(xmlAttribute.Value, null);
-				}
-				else if (macroAttribute.defaultValue != null)
-				{
-					value = macroAttribute.defaultValue;
-				}
+        private void ExecuteInvocationTasks(XmlNode invocationTasks)
+        {
+            foreach (XmlNode childNode in invocationTasks)
+            {
+                if (childNode.NodeType != XmlNodeType.Element || !childNode.NamespaceURI.Equals(_task.NamespaceManager.LookupNamespace("nant")))
+                {
+                    continue;
+                }
 
-				string localPropertyName = macroAttribute.LocalPropertyName;
+                var childTask = CreateChildTask(childNode);
+                
+                if (childTask != null)
+                {
+                    childTask.Parent = this;
+                    childTask.Execute();
+                }
+            }
+        }
 
-				task.Log(Level.Debug, "Setting property " + localPropertyName + " to " + value);
-				if (logMessage.Length > 0)
-					logMessage.Append(", ");
-				logMessage.Append(localPropertyName);
-				logMessage.Append(" = '");
-				logMessage.Append(value);
-				logMessage.Append("'");
+        protected virtual Task CreateChildTask(XmlNode node)
+        {
+            return _task.Project.CreateTask(node);
+        }
 
-				if (projectProperties.Contains(localPropertyName))
-				{
-					oldPropertyValues.Add(localPropertyName, projectProperties[localPropertyName]);
-					projectProperties.Remove(localPropertyName);
-				}
-				if (value != null)
-					projectProperties.Add(localPropertyName, value);
-			}
+        private static void RestoreProperties(ArrayList attributeList, Task task, PropertyDictionary oldValues)
+        {
+            var projectProperties = task.Project.Properties;
+            
+            foreach (MacroAttribute macroAttribute in attributeList)
+            {
+                var localPropertyName = macroAttribute.LocalPropertyName;
+                var oldValue = oldValues[localPropertyName];
 
-			task.Log(Level.Info, logMessage.ToString());
-		}
-	}
+                if (projectProperties.Contains(localPropertyName))
+                    projectProperties.Remove(localPropertyName);
+
+                if (oldValue != null)
+                    projectProperties.Add(localPropertyName, oldValue);
+            }
+        }
+
+        private static void SetUpProperties(ArrayList attributeList, Task task, XmlNode xml, PropertyDictionary oldPropertyValues)
+        {
+            var projectProperties = task.Project.Properties;
+            var logMessage = new StringBuilder();
+            
+            foreach (MacroAttribute macroAttribute in attributeList)
+            {
+                var attributeName = macroAttribute.AttributeName;
+                var xmlAttribute = xml.Attributes[attributeName];
+                string value = null;
+                
+                if (xmlAttribute != null)
+                {
+                    value = projectProperties.ExpandProperties(xmlAttribute.Value, null);
+                }
+                else if (macroAttribute.DefaultValue != null)
+                {
+                    value = macroAttribute.DefaultValue;
+                }
+
+                var localPropertyName = macroAttribute.LocalPropertyName;
+
+                task.Log(Level.Debug, "Setting property {0} to {1}", localPropertyName, value);
+
+                if (logMessage.Length > 0) logMessage.Append(", ");
+
+                logMessage.AppendFormat("{0} = '{1}'", localPropertyName, value);
+
+                if (projectProperties.Contains(localPropertyName))
+                {
+                    oldPropertyValues.Add(localPropertyName, projectProperties[localPropertyName]);
+                    projectProperties.Remove(localPropertyName);
+                }
+
+                if (value != null)
+                    projectProperties.Add(localPropertyName, value);
+            }
+
+            task.Log(Level.Info, logMessage.ToString());
+        }
+    }
 }
