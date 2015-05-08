@@ -101,6 +101,32 @@
 		<fail if="${ element_executed != 'true'}" message="element_executed: expected true but was ${element_executed}"/>
 	</target>
 
+	<target name="test-elements-nested">
+		<macrodef name="macro-with-nested-elements">
+			<elements>
+				<element name="files"/>
+			</elements>
+			<sequential>
+				<delete>
+					<files />
+				</delete>
+			</sequential>
+		</macrodef>
+
+		<property name="test-elements-nested-file" value="${path::get-temp-file-name()}" />
+		<echo>${test-elements-nested-file}</echo>
+		<echo file="${test-elements-nested-file}">message</echo>
+
+		<macro-with-nested-elements>
+			<files>
+				<fileset>
+					<include name="${test-elements-nested-file}" />
+				</fileset>
+			</files>
+		</macro-with-nested-elements>
+		<fail if="${file::exists(test-elements-nested-file)}" message="${test-elements-nested-file} should have been deleted by the macrodef"/>
+	</target>
+
 
 	<target name="test-duplicate-macrodef">
 		<!--Should not fail if the same macro is included twice-->
@@ -133,6 +159,7 @@
 			test-properties-backedup,
 			test-property-subst,
 			test-elements,
+			test-elements-nested,
 			test-duplicate-macrodef,
 			test-duplicate-macrodef-redefinition,
 			test-element-from-different-context
