@@ -71,7 +71,7 @@ namespace Macrodef
 
 		private void ReplaceMacroElementsInInvocationXml(string elementName, XmlNode invocationTasks)
 		{
-			XmlNodeList elementPlaceholders = invocationTasks.SelectNodes("nant:" + elementName, task.NamespaceManager);
+			XmlNodeList elementPlaceholders = invocationTasks.SelectNodes("//nant:" + elementName, task.NamespaceManager);
 			Log(Level.Verbose,
 			    "Inserting " + elementPlaceholders.Count + " call(s) of '" + elementName + "' in " + invocationTasks.InnerXml);
 
